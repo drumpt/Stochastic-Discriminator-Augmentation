@@ -100,13 +100,14 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
         for i, (imgs, _) in enumerate(train_dataloader):
             
             if opt.mode == 1: # Simple Augmentation
-                # TODO
+                # TODO : uniformly select augmentations
                 raise NotImplemented
-            elif opt.mode == 2: # Probablistic Augmentation
-                # TODO
+            elif opt.mode == 2: # Stochastic Discriminator Augmentation
+                # TODO : stochastically select augmentations (select augmentation probabilistically)
                 raise NotImplemented
             
-            if opt.mode == 1 or opt.mode == 2:
+            if opt.mode == 1 or opt.mode == 2: 
+                # TODO : Apply selected augmentations to a image
                 raise NotImplemented
 
             # Adversarial ground truths
@@ -129,8 +130,8 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             gen_imgs = generator(z)
             orig_gen_imgs = gen_imgs.detach()
 
-            if opt.mode == 2:
-                # TODO
+            if opt.mode == 2: # Stochastic Discriminator Augmentation
+                # TODO : Apply selected augmentations to a generaeted image
                 raise NotImplemented
 
             # Loss measures generator's ability to fool the discriminator
