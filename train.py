@@ -19,7 +19,7 @@ from tqdm import tqdm
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--n_epochs", type=int, default=9999999999, help="number of epochs of training")
+parser.add_argument("--n_epochs", type=int, default=5000, help="number of epochs of training")
 parser.add_argument("--batch_size", type=int, default=64, help="size of the batches")
 parser.add_argument("--lr", type=float, default=0.0002, help="adam: learning rate")
 parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
@@ -40,8 +40,8 @@ adversarial_loss = torch.nn.BCELoss()
 
 device = opt.gpu if torch.cuda.is_available() else 'cpu'
 
-os.makedirs(f"images/{device}", exist_ok=True)
-writer = SummaryWriter()
+os.makedirs(f"images/{device}/{opt.probability}/{opt.n_training_images}", exist_ok=True)
+writer = SummaryWriter(comment=f"mode_{opt.mode}_p_{opt.probability}_n_images_{opt.n_training_images}")
 
 def weights_init_normal(m):
     classname = m.__class__.__name__
@@ -91,7 +91,7 @@ def validation(generator, discriminator, dataloader, Tensor, batches_done):
     print("Validation Discriminator Loss : {}".format(average_d_loss))
     writer.add_scalar('Validation/Generator Loss', average_g_loss, batches_done)
     writer.add_scalar('Validation/Discriminator Loss', average_d_loss, batches_done)
-    save_image(gen_imgs.data[:25], f"images/{opt.gpu}/val_{batches_done}.png", nrow=5, normalize=True)
+    save_image(gen_imgs.data[:25], f"images/{device}/{opt.probability}/{opt.n_training_images}/val_{batches_done}.png", nrow=5, normalize=True)
         
 def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, val_dataloader, Tensor):
     
@@ -119,7 +119,7 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             if opt.mode == 1 or opt.mode == 2: 
                 # TODO : Apply selected augmentations to a image
                 imgs = torch.cat([augmentation(imgs) for augmentation in augmentations], dim=0)
-                print(f"imgs.shape : {imgs.shape}")
+                # print(f"imgs.shape : {imgs.shape}")
 
             # Adversarial ground truths
             valid = Variable(Tensor(imgs.shape[0], 1).fill_(1.0), requires_grad=False).to(device)
@@ -135,7 +135,10 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             optimizer_G.zero_grad()
 
             # Sample noise as generator input
-            z = Variable(Tensor(np.random.normal(0, 1, (orig_dim, opt.latent_dim)))).to(device)
+            if opt.mode == 2:
+                z = Variable(Tensor(np.random.normal(0, 1, (orig_dim, opt.latent_dim)))).to(device)
+            else:
+                z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], opt.latent_dim)))).to(device)
 
             # Generate a batch of images
             gen_imgs = generator(z)
@@ -144,7 +147,7 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             if opt.mode == 2: # Stochastic Discriminator Augmentation
                 # TODO : Apply selected augmentations to a generaeted image
                 gen_imgs = torch.cat([augmentation(gen_imgs) for augmentation in augmentations], dim=0)
-                print(f"gen_imgs.shape :{gen_imgs.shape}")
+                # print(f"gen_imgs.shape :{gen_imgs.shape}")
 
             # Loss measures generator's ability to fool the discriminator
             g_loss = adversarial_loss(discriminator(gen_imgs), valid)
@@ -166,13 +169,13 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             d_loss.backward()
             optimizer_D.step()
 
-
             batches_done = epoch * len(train_dataloader) + i
             
             if batches_done % opt.sample_interval == 0:
                 writer.add_scalar('Train/Generator Loss', g_loss, batches_done)
                 writer.add_scalar('Train/Discriminator Loss', d_loss, batches_done)
-                save_image(orig_gen_imgs.data[:25], f"images/{opt.gpu}/{batches_done}.png", nrow=5, normalize=True)
+                # save_image(orig_gen_imgs.data[:25], f"images/{opt.gpu}/{batches_done}.png", nrow=5, normalize=True)
+                save_image(orig_gen_imgs.data[:25], f"images/{device}/{opt.probability}/{opt.n_training_images}/{batches_done}.png", nrow=5, normalize=True)
                 validation(generator, discriminator, val_dataloader, Tensor, batches_done)
         pbar.set_description(f"G Loss : {g_loss.item()} D Loss : {d_loss.item()}")
 
