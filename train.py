@@ -98,17 +98,28 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
     pbar = tqdm(range(opt.n_epochs))
     for epoch in pbar:
         for i, (imgs, _) in enumerate(train_dataloader):
-            
+            identity_mapping = [lambda img: img]
+            full_augmentations = [
+                lambda img: img,
+                transforms.RandomAffine(degrees=15, shear=15),
+                transforms.ColorJitter()
+            ]
+            orig_dim = imgs.shape[0]
+
             if opt.mode == 1: # Simple Augmentation
                 # TODO : uniformly select augmentations
-                raise NotImplemented
+                augmentations = full_augmentations
             elif opt.mode == 2: # Stochastic Discriminator Augmentation
                 # TODO : stochastically select augmentations (select augmentation probabilistically)
-                raise NotImplemented
-            
+                if np.random.choice([True, False], p=[opt.probability, 1 - opt.probability]):
+                    augmentations = full_augmentations
+                else:
+                    augmentations = identity_mapping
+
             if opt.mode == 1 or opt.mode == 2: 
                 # TODO : Apply selected augmentations to a image
-                raise NotImplemented
+                imgs = torch.cat([augmentation(imgs) for augmentation in augmentations], dim=0)
+                print(f"imgs.shape : {imgs.shape}")
 
             # Adversarial ground truths
             valid = Variable(Tensor(imgs.shape[0], 1).fill_(1.0), requires_grad=False).to(device)
@@ -124,7 +135,7 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
             optimizer_G.zero_grad()
 
             # Sample noise as generator input
-            z = Variable(Tensor(np.random.normal(0, 1, (imgs.shape[0], opt.latent_dim)))).to(device)
+            z = Variable(Tensor(np.random.normal(0, 1, (orig_dim, opt.latent_dim)))).to(device)
 
             # Generate a batch of images
             gen_imgs = generator(z)
@@ -132,7 +143,8 @@ def train(generator, discriminator, optimizer_G, optimizer_D, train_dataloader, 
 
             if opt.mode == 2: # Stochastic Discriminator Augmentation
                 # TODO : Apply selected augmentations to a generaeted image
-                raise NotImplemented
+                gen_imgs = torch.cat([augmentation(gen_imgs) for augmentation in augmentations], dim=0)
+                print(f"gen_imgs.shape :{gen_imgs.shape}")
 
             # Loss measures generator's ability to fool the discriminator
             g_loss = adversarial_loss(discriminator(gen_imgs), valid)
